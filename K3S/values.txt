@@ -1,12 +1,12 @@
 global:
   edition: ce
   hosts:
-    domain: intigo.tn
+    domain: exemple.tn
     externalIP: 92.205.228.109
     external:
       https: false
     gitlab:
-      name: gitlab.intigo.tn
+      name: gitlab.exemple.tn
   ingress:
     enabled: true
     configureCertmanager: false
