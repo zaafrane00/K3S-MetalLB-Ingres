@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: gitlab.intigo.tn
+  - host: gitlab.exemple.tn
     http:
       paths:
       - path: /
