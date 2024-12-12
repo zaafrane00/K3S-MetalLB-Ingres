@@ -1,0 +1,54 @@
+global:
+  edition: ce
+  hosts:
+    domain: intigo.tn
+    externalIP: 92.205.228.109
+    external:
+      https: false
+    gitlab:
+      name: gitlab.intigo.tn
+  ingress:
+    enabled: true
+    configureCertmanager: false
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+
+
+
+nginx-ingress:
+  controller:
+    service:
+      type: LoadBalancer
+      loadBalancerIP: 92.205.228.111
+
+gitlab:
+  webservice:
+    ingress:
+      enabled: true
+    service:
+      type: ClusterIP
+  registry:
+    service:
+      type: ClusterIP
+  kas:
+    service:
+      type: ClusterIP
+
+
+certmanager-issuer:
+  email: zaafranehamza@gmail.com
+
+gitlab:
+  certmanager:
+    install: false
+  gitaly:
+    replicas: 1
+  gitlab-runner:
+    install: false
+  minio:
+    enabled: false
+  prometheus:
+    install: false
+  postgresql:
+    replicas: 1

@@ -1,0 +1,205 @@
+# version: "3.8"
+# services:
+#   gitlab:
+#     image: gitlab/gitlab-ce:latest
+#     container_name: gitlab
+#     restart: unless-stopped
+#     hostname: gitlab
+#     environment:
+#       GITLAB_OMNIBUS_CONFIG: |
+#         external_url 'http://localhost:8080'
+#         nginx['listen_port'] = 80
+#         gitlab_rails['initial_root_password'] = 'Abcd0123456789'
+#         puma['worker_processes'] = 0 # disable cluster mode to avoid more memory usage
+#     ports:
+#       - "8080:80"
+#       - "1443:443"
+#       - "122:22"
+#     volumes:
+#       - gitlab_config:/etc/gitlab
+#       - gitlab_logs:/var/log/gitlab
+#       - gitlab_data:/var/opt/gitlab
+#     shm_size: '2gb'
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost/"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 5
+
+
+#   gitlab-runner:
+#     container_name: gitlab-runner
+#     volumes:
+#       # - gitlab-runner-config:/etc/gitlab-runner
+#       - /mnt/c/Users/zaafr/Desktop/GITLAB-SERVER/gitlab-runner/gitlab-runner:/etc/gitlab-runner/
+#       - /var/run/docker.sock:/var/run/docker.sock  # Docker socket
+#       - /usr/local/bin/docker:/usr/local/bin/docker # Mount docker binary
+#     network_mode: host
+#     environment:
+#       - DOCKER_TLS_CERTDIR=/certs
+#     privileged: true  # Allow privileged mode for Docker-in-Docker
+
+#     # Optional: Add the Docker CLI installation in the GitLab Runner container
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+
+
+
+# volumes:
+#   gitlab_config: {}
+#   gitlab_logs: {}
+#   gitlab_data: {}
+#   gitlab-runner-config: {}
+#   gitlab-runner-config2: {}
+
+# # networks:
+# #   gitlab-network:
+# #     name: gitlab-network
+
+ #############################################################
+version: '3.8'
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+        reservations:
+          memory: 2G
+          cpus: '1'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost:8080'
+        nginx['listen_port'] = 80
+        puma['worker_processes'] = 0
+        gitlab_rails['initial_root_password_file'] = '/run/secrets/gitlab_root_password'
+
+    secrets:
+      - gitlab_root_password
+
+    networks:
+      - gitlab_network
+
+    volumes:
+      - type: volume
+        source: gitlab_config
+        target: /etc/gitlab
+        volume:
+          nocopy: true
+      - type: volume
+        source: gitlab_logs
+        target: /var/log/gitlab
+        volume:
+          nocopy: true
+      - type: volume
+        source: gitlab_data
+        target: /var/opt/gitlab
+        volume:
+          nocopy: true
+
+    ports:
+      - target: 80
+        published: 8080
+        mode: host
+      - target: 443
+        published: 1443
+        mode: host
+      - target: 22
+        published: 122
+        mode: host
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: volume
+        source: gitlab-runner-config
+        target: /etc/gitlab-runner
+
+    networks:
+      - gitlab_network
+
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+
+    # Note: Privileged mode should be used cautiously
+    privileged: true
+
+networks:
+  gitlab_network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  gitlab_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/gitlab/config
+
+  gitlab_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/gitlab/logs
+
+  gitlab_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/gitlab/data
+
+  gitlab-runner-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/gitlab/runner-config
+
+secrets:
+  gitlab_root_password:
+    file: ./gitlab_root_password.txt

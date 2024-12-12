@@ -1,0 +1,61 @@
+   14  sudo apt update
+   15  curl -sfL https://get.k3s.io | sh -
+   16  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+   17  chmod +x kubectl
+   18  sudo mv kubectl /usr/local/bin/
+
+   50  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+   51  echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml' >> ~/.bashrc
+   52  source ~/.bashrc
+       sudo chown $USER:$USER /etc/rancher/k3s/k3s.yaml
+       chmod 600 /etc/rancher/k3s/k3s.yaml
+
+   53  kubectl get nodes
+
+   54  ls -l /etc/rancher/k3s/k3s.yaml
+   55  sudo chown $(whoami):$(whoami) /etc/rancher/k3s/k3s.yaml
+   56  sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+   57  kubectl get nodes
+   58  alias k=kubectl
+
+   61  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+   62  helm repo add gitlab https://charts.gitlab.io
+   63  helm repo update
+
+   66  mkdir metalLB
+   67  cd metalLB/
+   68  kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/manifests/metallb-native.yaml
+
+   73  k get po -n metallb-system
+   74  nano ipaddresspool.yml
+   75  k apply -f ipaddresspool.yml
+
+   77  mkdir gitlab
+   78  cd gitlab/
+   79  nano values.yml
+   80  k create namespace gitlab
+
+   84  helm install gitlab gitlab/gitlab -f values.yml -n gitlab
+
+   93  nano gitlab-ingress.yml
+   94  k apply -f gitlab-ingress.yml
+
+   97  helm list -A | grep traefik
+   98  sudo systemctl stop k3s
+
+   99  sudo nano /etc/systemd/system/k3s.service
+   Find the ExecStart line and add --disable traefik:
+   ExecStart=/usr/local/bin/k3s server --disable traefik
+  100  sudo systemctl daemon-reload
+  101  sudo systemctl start k3s
+
+  103  kubectl logs -n metallb-system -l app=metallb
+  104  kubectl get svc -n gitlab
+
+  kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -ojsonpath='{.data.password}' | base64 --decode
+
+
+
+
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDgshTX/bWoVmnHSt4Oz390mNgpYUnpG2LIBzA5iwg9wpVQ86WvdqGlWzuNc0NEtdfKI+M1npMNKrOZGXPMv95qYALCkpzq+jhseWSs/sDL2At9dE9lU5qPhv7Ljvwx+JazLTv6IWqLXBaX8QihRziPdE9adoiJY5xr1gI95IQ9/q2my8iuSfwhJhcR9l8+cEPKuwYNc5C1OWRnpfQTVHozw2fqgDLvDaEkF0Wihc1o0ts3myLVdTqATRXAnNFCW+oIFQzjrvnLHrSsdwMLr5AR2kcvz4rszf3usXlnoQi3HjymaVg6moJXI/cW0v58SU0lvcuvkSODiYqZy/WxtY8XGRUeRtjDSD7Z33kzEhyuhYbUI20nXBUzvsWH1HbWV3FzRKR/jHJtxuAAVjsbquPT6I83ffLQyuvRbUm3UKAmA9tju7+RdSMtLa0TxuRbZExyFINUU9Ln9vwZdSxVIqwi+IWBzT0lM4UD7ID9Qp6DtQzY9Egyn5xPUZDQ7aRQewk= zaafr@HamzaZPC
+" >> /home/intigo/.ssh/authorized_keys
